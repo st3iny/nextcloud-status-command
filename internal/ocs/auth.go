@@ -7,6 +7,12 @@ import (
 	"github.com/adrg/xdg"
 )
 
+type Auth struct {
+	ServerBaseUrl string `json:"serverBaseUrl"`
+	User          string `json:"user"`
+	Password      string `json:"password"`
+}
+
 func LoadAuth() (Auth, error) {
 	authPath, err := xdg.ConfigFile("nsc/auth.json")
 	if err != nil {

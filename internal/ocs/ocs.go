@@ -16,12 +16,6 @@ func getStatusEndpoint(user string) string {
 	return fmt.Sprintf("/ocs/v2.php/apps/user_status/api/v1/statuses/%s", user)
 }
 
-type Auth struct {
-	ServerBaseUrl string `json:"serverBaseUrl"`
-	User          string `json:"user"`
-	Password      string `json:"password"`
-}
-
 type StatusMessage struct {
 	ClearAt    int64  `json:"clearAt"`
 	Message    string `json:"message"`
