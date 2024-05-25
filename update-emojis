@@ -1,0 +1,6 @@
+#!/bin/sh
+
+# Download fresh emoji.json and generate go code.
+
+curl -L https://github.com/github/gemoji/raw/master/db/emoji.json > emoji.json
+go generate cmd/nsc/main.go
