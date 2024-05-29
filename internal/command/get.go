@@ -23,7 +23,11 @@ func RunGet() error {
 		clearAt = time.Unix(status.ClearAt, 0).String()
 	}
 
-	fmt.Printf("%s (%s) %s %s\n", status.User, status.Status, status.Icon, status.Message)
+	if status.Icon == "" {
+		fmt.Printf("%s (%s) %s\n", status.User, status.Status, status.Message)
+	} else {
+		fmt.Printf("%s (%s) %s %s\n", status.User, status.Status, status.Icon, status.Message)
+	}
 	fmt.Printf("clear at %s\n", clearAt)
 	return nil
 }
