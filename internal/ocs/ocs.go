@@ -17,7 +17,7 @@ func getStatusEndpoint(user string) string {
 }
 
 type StatusMessage struct {
-	ClearAt    int64  `json:"clearAt"`
+	ClearAt    int64  `json:"clearAt,omitempty"`
 	Message    string `json:"message"`
 	StatusIcon string `json:"statusIcon,omitempty"`
 }
@@ -31,6 +31,7 @@ type UserStatus struct {
 	Status  string
 	Icon    string
 	Message string
+	ClearAt int64
 }
 
 func (a *Auth) Endpoint(url string) string {
@@ -83,6 +84,11 @@ func GetStatus(auth Auth) (*UserStatus, error) {
 	switch data["icon"].(type) {
 	case string:
 		status.Icon = data["icon"].(string)
+	}
+
+	switch data["clearAt"].(type) {
+	case float64:
+		status.ClearAt = int64(data["clearAt"].(float64))
 	}
 
 	return &status, nil

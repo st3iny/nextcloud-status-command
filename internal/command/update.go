@@ -49,6 +49,21 @@ func newUpdateModel() updateModel {
 		emojiOptions = append(emojiOptions, option)
 	}
 
+	now := time.Now()
+	nowUnix := now.Unix()
+	startOfTodayUnix := time.
+		Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, now.Location()).
+		Unix()
+	daysUntilSunday := int64(daysFromStartOfDayUntilEndOfSunday(now))
+	var timeoutOptions = []huh.Option[int64]{
+		huh.NewOption("never", int64(0)),
+		huh.NewOption("30 minutes", nowUnix+1800),
+		huh.NewOption("1 hour", nowUnix+3600),
+		huh.NewOption("4 hours", nowUnix+4*3600),
+		huh.NewOption("today", startOfTodayUnix+24*3600),
+		huh.NewOption("this week", startOfTodayUnix+daysUntilSunday*24*3600),
+	}
+
 	return updateModel{
 		form: huh.NewForm(
 			huh.NewGroup(
@@ -66,9 +81,24 @@ func newUpdateModel() updateModel {
 					Lines(1).
 					Placeholder("Status message ...").
 					Title("Type a status message"),
+				huh.NewSelect[int64]().
+					Key("timeout").
+					Options(timeoutOptions...).
+					Title("Delete status after"),
 			),
 		),
 	}
+}
+
+func daysFromStartOfDayUntilEndOfSunday(date time.Time) int {
+	var daysUntilEndOfSunday int
+	weekday := int(date.Weekday())
+	if weekday == 0 /* Sunday */ {
+		daysUntilEndOfSunday = 1
+	} else /* Not Sunday */ {
+		daysUntilEndOfSunday = 7 - weekday + 1
+	}
+	return daysUntilEndOfSunday
 }
 
 func (m updateModel) Init() tea.Cmd {
@@ -107,6 +137,7 @@ func updateStatusAndMessage(auth ocs.Auth, model updateModel) {
 	status := model.form.GetString("status")
 	message := model.form.GetString("message")
 	emoji := model.form.GetString("emoji")
+	timeout := model.form.Get("timeout").(int64)
 
 	var wg sync.WaitGroup
 	wg.Add(2)
@@ -124,7 +155,7 @@ func updateStatusAndMessage(auth ocs.Auth, model updateModel) {
 
 	go func() {
 		err := ocs.UpdateStatusMessage(auth, ocs.StatusMessage{
-			ClearAt:    time.Now().Unix() + 3600,
+			ClearAt:    timeout,
 			Message:    message,
 			StatusIcon: emoji,
 		})
