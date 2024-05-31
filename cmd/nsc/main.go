@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/st3iny/nsc/internal/command"
+	"github.com/st3iny/nextcloud-status-command/internal/command"
 )
 
 //go:generate go run ../../scripts/generateEmojis.go

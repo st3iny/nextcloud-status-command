@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/st3iny/nsc/internal/ocs"
+	"github.com/st3iny/nextcloud-status-command/internal/ocs"
 )
 
 func RunGet() error {

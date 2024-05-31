@@ -1,4 +1,4 @@
-module github.com/st3iny/nsc
+module github.com/st3iny/nextcloud-status-command
 
 go 1.22.3
 

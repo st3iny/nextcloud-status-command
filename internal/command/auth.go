@@ -6,8 +6,8 @@ import (
 
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/huh"
-	"github.com/st3iny/nsc/internal/emoji"
-	"github.com/st3iny/nsc/internal/ocs"
+	"github.com/st3iny/nextcloud-status-command/internal/emoji"
+	"github.com/st3iny/nextcloud-status-command/internal/ocs"
 )
 
 func RunAuth() error {

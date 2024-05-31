@@ -4,7 +4,7 @@ import (
 	"fmt"
 
 	"github.com/charmbracelet/huh/spinner"
-	"github.com/st3iny/nsc/internal/ocs"
+	"github.com/st3iny/nextcloud-status-command/internal/ocs"
 )
 
 type errorMsg struct {
