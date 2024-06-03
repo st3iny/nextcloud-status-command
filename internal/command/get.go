@@ -18,6 +18,13 @@ func RunGet() error {
 		return err
 	}
 
+	if status == nil {
+		status = &ocs.UserStatus{
+			User:   auth.User,
+			Status: "online",
+		}
+	}
+
 	clearAt := "never"
 	if status.ClearAt > 0 {
 		clearAt = time.Unix(status.ClearAt, 0).String()

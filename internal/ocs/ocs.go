@@ -66,7 +66,9 @@ func GetStatus(auth Auth) (*UserStatus, error) {
 		return nil, err
 	}
 
-	if res.StatusCode != http.StatusOK {
+	if res.StatusCode == http.StatusNotFound {
+		return nil, nil
+	} else if res.StatusCode != http.StatusOK {
 		return nil, fmt.Errorf("Failed to get status message: %s %s", res.Status, string(resBody))
 	}
 
