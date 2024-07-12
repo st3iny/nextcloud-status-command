@@ -30,7 +30,7 @@ Run `nsc get` to print your current status, emoji and message.
 
 ## Build
 
-Run `make` to build a binary at `./nsc`.
+Run `make` or `go build -o nsc cmd/nsc/main.go` to build a binary at `./nsc`.
 
 ## Acknowledgements
 
