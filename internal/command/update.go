@@ -1,8 +1,10 @@
 package command
 
 import (
+	"flag"
 	"fmt"
 	"os"
+	"strings"
 	"sync"
 	"time"
 
@@ -13,13 +15,64 @@ import (
 	"github.com/st3iny/nextcloud-status-command/internal/ocs"
 )
 
+const (
+	statusOnline    = "online"
+	statusAway      = "away"
+	statusDnd       = "dnd"
+	statusInvisible = "invisible"
+
+	timeoutNever     = "never"
+	timeout30Minutes = "30 minutes"
+	timeout1Hour     = "1 hour"
+	timeout4Hours    = "4 hours"
+	timeoutToday     = "today"
+	timeoutThisWeek  = "this week"
+)
+
 func RunUpdate() error {
+	statusOptions := []string{
+		statusOnline,
+		statusAway,
+		statusDnd,
+		statusInvisible,
+	}
+	timeoutOptions := []string{
+		timeoutNever,
+		timeout30Minutes,
+		timeout1Hour,
+		timeout4Hours,
+		timeoutToday,
+		timeoutThisWeek,
+	}
+
+	statusValue := flag.String("status", statusOnline, fmt.Sprintf(
+		"your status [options: %s]",
+		strings.Join(statusOptions, ", "),
+	))
+	emojiValue := flag.String("emoji", "", "your status emoji")
+	messageValue := flag.String("message", "", "your status message")
+	timeoutKey := flag.String("timeout", timeoutNever, fmt.Sprintf(
+		"timeout after which to delete your status [options: %s]",
+		strings.Join(timeoutOptions, ", "),
+	))
+	submit := flag.Bool("submit", false, "skip the form and submit your status directly")
+	flag.Parse()
+
 	auth, err := ocs.LoadAuth()
 	if err != nil {
 		return missingAuthError()
 	}
 
-	p := tea.NewProgram(newUpdateModel())
+	p := tea.NewProgram(newUpdateModel(statusValue, emojiValue, messageValue, timeoutKey))
+	// Hackity hack: Simulate form submission by pressing enter once for each field
+	if *submit {
+		go func() {
+			p.Send(tea.KeyMsg{Type: tea.KeyEnter})
+			p.Send(tea.KeyMsg{Type: tea.KeyEnter})
+			p.Send(tea.KeyMsg{Type: tea.KeyEnter})
+			p.Send(tea.KeyMsg{Type: tea.KeyEnter})
+		}()
+	}
 	m, err := p.Run()
 	model := m.(updateModel)
 	if err != nil {
@@ -42,8 +95,8 @@ type updateModel struct {
 	form *huh.Form
 }
 
-func newUpdateModel() updateModel {
-	var emojiOptions = []huh.Option[string]{huh.NewOption("none", "")}
+func newUpdateModel(statusValue, emojiValue, messageValue, timeoutKey *string) updateModel {
+	emojiOptions := []huh.Option[string]{huh.NewOption("none", "")}
 	for _, e := range emoji.Emojis {
 		option := huh.NewOption(fmt.Sprintf("%s %s", e.Emoji, e.Description), e.Emoji)
 		emojiOptions = append(emojiOptions, option)
@@ -55,13 +108,21 @@ func newUpdateModel() updateModel {
 		Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, now.Location()).
 		Unix()
 	daysUntilSunday := int64(daysFromStartOfDayUntilEndOfSunday(now))
-	var timeoutOptions = []huh.Option[int64]{
-		huh.NewOption("never", int64(0)),
-		huh.NewOption("30 minutes", nowUnix+1800),
-		huh.NewOption("1 hour", nowUnix+3600),
-		huh.NewOption("4 hours", nowUnix+4*3600),
-		huh.NewOption("today", startOfTodayUnix+24*3600),
-		huh.NewOption("this week", startOfTodayUnix+daysUntilSunday*24*3600),
+	timeoutOptions := []huh.Option[int64]{
+		huh.NewOption(timeoutNever, int64(0)),
+		huh.NewOption(timeout30Minutes, nowUnix+1800),
+		huh.NewOption(timeout1Hour, nowUnix+3600),
+		huh.NewOption(timeout4Hours, nowUnix+4*3600),
+		huh.NewOption(timeoutToday, startOfTodayUnix+24*3600),
+		huh.NewOption(timeoutThisWeek, startOfTodayUnix+daysUntilSunday*24*3600),
+	}
+
+	timeoutValue := new(int64)
+	for _, option := range timeoutOptions {
+		if option.Key == *timeoutKey {
+			*timeoutValue = option.Value
+			break
+		}
 	}
 
 	return updateModel{
@@ -69,22 +130,31 @@ func newUpdateModel() updateModel {
 			huh.NewGroup(
 				huh.NewSelect[string]().
 					Key("status").
-					Options(huh.NewOptions("online", "away", "dnd", "invisible")...).
-					Title("Choose a status"),
+					Options(huh.NewOptions(
+						statusOnline,
+						statusAway,
+						statusDnd,
+						statusInvisible,
+					)...).
+					Title("Choose a status").
+					Value(statusValue),
 				huh.NewSelect[string]().
 					Key("emoji").
 					Options(emojiOptions...).
 					Height(10).
-					Title("Choose an emoji (type / to search)"),
+					Title("Choose an emoji (type / to search)").
+					Value(emojiValue),
 				huh.NewText().
 					Key("message").
 					Lines(1).
 					Placeholder("Status message ...").
-					Title("Type a status message"),
+					Title("Type a status message").
+					Value(messageValue),
 				huh.NewSelect[int64]().
 					Key("timeout").
 					Options(timeoutOptions...).
-					Title("Delete status after"),
+					Title("Delete status after").
+					Value(timeoutValue),
 			),
 		),
 	}

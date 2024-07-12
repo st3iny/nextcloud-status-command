@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"os"
+	"strings"
 
 	"github.com/st3iny/nextcloud-status-command/internal/command"
 )
@@ -13,6 +14,9 @@ func main() {
 	cmd := ""
 	if len(os.Args) >= 2 {
 		cmd = os.Args[1]
+	}
+	if strings.HasPrefix(cmd, "-") {
+		cmd = ""
 	}
 
 	var err error
