@@ -56,6 +56,7 @@ func RunUpdate() error {
 		strings.Join(timeoutOptions, ", "),
 	))
 	submit := flag.Bool("submit", false, "skip the form and submit your status directly")
+	keep := flag.Bool("keep", false, "prefill all fields with values from your current status")
 	flag.Parse()
 
 	auth, err := ocs.LoadAuth()
@@ -63,7 +64,22 @@ func RunUpdate() error {
 		return missingAuthError()
 	}
 
-	p := tea.NewProgram(newUpdateModel(statusValue, emojiValue, messageValue, timeoutKey))
+	var timeoutValue int64
+	if *keep {
+		status, err := ocs.GetStatus(auth)
+		if err != nil {
+			return fmt.Errorf("Failed to fetch current status: %s", err)
+		}
+
+		*statusValue = status.Status
+		*emojiValue = status.Icon
+		*messageValue = status.Message
+		timeoutValue = status.ClearAt
+	} else {
+		timeoutValue = timeoutKeyToValue(*timeoutKey)
+	}
+
+	p := tea.NewProgram(newUpdateModel(statusValue, emojiValue, messageValue, &timeoutValue))
 	// Hackity hack: Simulate form submission by pressing enter once for each field
 	if *submit {
 		go func() {
@@ -95,34 +111,11 @@ type updateModel struct {
 	form *huh.Form
 }
 
-func newUpdateModel(statusValue, emojiValue, messageValue, timeoutKey *string) updateModel {
+func newUpdateModel(statusValue, emojiValue, messageValue *string, timeoutValue *int64) updateModel {
 	emojiOptions := []huh.Option[string]{huh.NewOption("none", "")}
 	for _, e := range emoji.Emojis {
 		option := huh.NewOption(fmt.Sprintf("%s %s", e.Emoji, e.Description), e.Emoji)
 		emojiOptions = append(emojiOptions, option)
-	}
-
-	now := time.Now()
-	nowUnix := now.Unix()
-	startOfTodayUnix := time.
-		Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, now.Location()).
-		Unix()
-	daysUntilSunday := int64(daysFromStartOfDayUntilEndOfSunday(now))
-	timeoutOptions := []huh.Option[int64]{
-		huh.NewOption(timeoutNever, int64(0)),
-		huh.NewOption(timeout30Minutes, nowUnix+1800),
-		huh.NewOption(timeout1Hour, nowUnix+3600),
-		huh.NewOption(timeout4Hours, nowUnix+4*3600),
-		huh.NewOption(timeoutToday, startOfTodayUnix+24*3600),
-		huh.NewOption(timeoutThisWeek, startOfTodayUnix+daysUntilSunday*24*3600),
-	}
-
-	timeoutValue := new(int64)
-	for _, option := range timeoutOptions {
-		if option.Key == *timeoutKey {
-			*timeoutValue = option.Value
-			break
-		}
 	}
 
 	return updateModel{
@@ -152,23 +145,12 @@ func newUpdateModel(statusValue, emojiValue, messageValue, timeoutKey *string) u
 					Value(messageValue),
 				huh.NewSelect[int64]().
 					Key("timeout").
-					Options(timeoutOptions...).
+					Options(timeoutOptions(timeoutValue)...).
 					Title("Delete status after").
 					Value(timeoutValue),
 			),
 		),
 	}
-}
-
-func daysFromStartOfDayUntilEndOfSunday(date time.Time) int {
-	var daysUntilEndOfSunday int
-	weekday := int(date.Weekday())
-	if weekday == 0 /* Sunday */ {
-		daysUntilEndOfSunday = 1
-	} else /* Not Sunday */ {
-		daysUntilEndOfSunday = 7 - weekday + 1
-	}
-	return daysUntilEndOfSunday
 }
 
 func (m updateModel) Init() tea.Cmd {
@@ -245,4 +227,63 @@ func missingAuthError() error {
 			"Please run \"%s auth\" first",
 		os.Args[0],
 	)
+}
+
+func daysFromStartOfDayUntilEndOfSunday(date time.Time) int {
+	var daysUntilEndOfSunday int
+	weekday := int(date.Weekday())
+	if weekday == 0 /* Sunday */ {
+		daysUntilEndOfSunday = 1
+	} else /* Not Sunday */ {
+		daysUntilEndOfSunday = 7 - weekday + 1
+	}
+	return daysUntilEndOfSunday
+}
+
+func timeoutOptions(timeoutValue *int64) []huh.Option[int64] {
+	now := time.Now()
+	nowUnix := now.Unix()
+	startOfTodayUnix := time.
+		Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, now.Location()).
+		Unix()
+	daysUntilSunday := int64(daysFromStartOfDayUntilEndOfSunday(now))
+	options := []huh.Option[int64]{
+		huh.NewOption(timeoutNever, int64(0)),
+		huh.NewOption(timeout30Minutes, nowUnix+1800),
+		huh.NewOption(timeout1Hour, nowUnix+3600),
+		huh.NewOption(timeout4Hours, nowUnix+4*3600),
+		huh.NewOption(timeoutToday, startOfTodayUnix+24*3600),
+		huh.NewOption(timeoutThisWeek, startOfTodayUnix+daysUntilSunday*24*3600),
+	}
+
+	if timeoutValue == nil {
+		return options
+	}
+
+	needsCustomOption := true
+	for _, option := range options {
+		if option.Value == *timeoutValue {
+			needsCustomOption = false
+			break
+		}
+	}
+
+	if needsCustomOption {
+		options = append(options, huh.NewOption(
+			fmt.Sprintf("custom (%s)", time.Unix(*timeoutValue, 0)),
+			*timeoutValue,
+		))
+	}
+
+	return options
+}
+
+func timeoutKeyToValue(timeoutKey string) int64 {
+	for _, option := range timeoutOptions(nil) {
+		if option.Key == timeoutKey {
+			return option.Value
+		}
+	}
+
+	return 0
 }

@@ -31,3 +31,16 @@ func TestDaysFromStartOfDayUntilEndOfSunday(t *testing.T) {
 	assert.Equal(3, daysFromStartOfDayUntilEndOfSunday(friday))
 	assert.Equal(2, daysFromStartOfDayUntilEndOfSunday(saturday))
 }
+
+func TestTimeoutOptions(t *testing.T) {
+	assert := assert.New(t)
+
+	options := timeoutOptions(nil)
+	for _, option := range options {
+		assert.NotContains("custom", option)
+	}
+
+	timestamp := int64(1000)
+	options = timeoutOptions(&timestamp)
+	assert.Contains(options[len(options)-1].Key, "custom")
+}
