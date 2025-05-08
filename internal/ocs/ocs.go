@@ -60,7 +60,7 @@ func GetStatus(auth Auth) (*UserStatus, error) {
 		return nil, err
 	}
 
-	var ocsResponse map[string]interface{}
+	var ocsResponse map[string]any
 	err = json.Unmarshal(resBody, &ocsResponse)
 	if err != nil {
 		return nil, err
@@ -72,7 +72,7 @@ func GetStatus(auth Auth) (*UserStatus, error) {
 		return nil, fmt.Errorf("Failed to get status message: %s %s", res.Status, string(resBody))
 	}
 
-	data := ocsResponse["ocs"].(map[string]interface{})["data"].(map[string]interface{})
+	data := ocsResponse["ocs"].(map[string]any)["data"].(map[string]any)
 	status := UserStatus{
 		User:   auth.User,
 		Status: data["status"].(string),
