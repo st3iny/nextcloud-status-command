@@ -114,6 +114,10 @@ type updateModel struct {
 func newUpdateModel(statusValue, emojiValue, messageValue *string, timeoutValue *int64) updateModel {
 	emojiOptions := []huh.Option[string]{huh.NewOption("none", "")}
 	for _, e := range emoji.Emojis {
+		if len(e.Emoji) > 4 {
+			continue
+		}
+
 		option := huh.NewOption(fmt.Sprintf("%s %s", e.Emoji, e.Description), e.Emoji)
 		emojiOptions = append(emojiOptions, option)
 	}
