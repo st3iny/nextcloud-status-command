@@ -56,7 +56,7 @@ func RunUpdate() error {
 		strings.Join(timeoutOptions, ", "),
 	))
 	submit := flag.Bool("submit", false, "skip the form and submit your status directly")
-	keep := flag.Bool("keep", false, "prefill all fields with values from your current status")
+	empty := flag.Bool("empty", false, "do not prefill all fields with values from your current status")
 	flag.Parse()
 
 	auth, err := ocs.LoadAuth()
@@ -65,18 +65,34 @@ func RunUpdate() error {
 	}
 
 	var timeoutValue int64
-	if *keep {
-		status, err := ocs.GetStatus(auth)
-		if err != nil {
-			return fmt.Errorf("Failed to fetch current status: %s", err)
-		}
-
-		*statusValue = status.Status
-		*emojiValue = status.Icon
-		*messageValue = status.Message
-		timeoutValue = status.ClearAt
-	} else {
+	if *empty {
 		timeoutValue = timeoutKeyToValue(*timeoutKey)
+	} else {
+		statusChannel := make(chan *ocs.UserStatus, 1)
+		errorChannel := make(chan error, 1)
+
+		spinner.New().
+			Title("Fetching your current status ...").
+			Action(func() {
+				status, err := ocs.GetStatus(auth)
+				if err != nil {
+					errorChannel <- err
+					return
+				}
+
+				statusChannel <- status
+			}).
+			Run()
+
+		select {
+		case err := <-errorChannel:
+			return fmt.Errorf("Failed to fetch current status: %s", err)
+		case status := <-statusChannel:
+			*statusValue = status.Status
+			*emojiValue = status.Icon
+			*messageValue = status.Message
+			timeoutValue = status.ClearAt
+		}
 	}
 
 	p := tea.NewProgram(newUpdateModel(statusValue, emojiValue, messageValue, &timeoutValue))
