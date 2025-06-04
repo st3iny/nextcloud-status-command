@@ -45,13 +45,18 @@ func RunUpdate() error {
 		timeoutThisWeek,
 	}
 
-	statusValue := flag.String("status", statusOnline, fmt.Sprintf(
+	defaultStatus := statusOnline
+	defaultEmoji := ""
+	defaultMessage := ""
+	defaultTimeoutKey := timeoutNever
+
+	statusValue := flag.String("status", defaultStatus, fmt.Sprintf(
 		"your status [options: %s]",
 		strings.Join(statusOptions, ", "),
 	))
-	emojiValue := flag.String("emoji", "", "your status emoji")
-	messageValue := flag.String("message", "", "your status message")
-	timeoutKey := flag.String("timeout", timeoutNever, fmt.Sprintf(
+	emojiValue := flag.String("emoji", defaultEmoji, "your status emoji")
+	messageValue := flag.String("message", defaultMessage, "your status message")
+	timeoutKey := flag.String("timeout", defaultTimeoutKey, fmt.Sprintf(
 		"timeout after which to delete your status [options: %s]",
 		strings.Join(timeoutOptions, ", "),
 	))
@@ -65,7 +70,7 @@ func RunUpdate() error {
 	}
 
 	var timeoutValue int64
-	if *empty {
+	if *empty || *statusValue != defaultStatus || *emojiValue != defaultEmoji || *messageValue != defaultMessage || *timeoutKey != defaultTimeoutKey {
 		timeoutValue = timeoutKeyToValue(*timeoutKey)
 	} else {
 		statusChannel := make(chan *ocs.UserStatus, 1)
