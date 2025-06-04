@@ -8,6 +8,8 @@ import (
 	"net/http"
 )
 
+const userAgent string = "nextcloud-status-command/0.1.0"
+
 const statusEndpoint string = "/ocs/v2.php/apps/user_status/api/v1/user_status/status"
 const messageEndpoint string = "/ocs/v2.php/apps/user_status/api/v1/user_status/message?format=json"
 const customMessageEndpoint string = "/ocs/v2.php/apps/user_status/api/v1/user_status/message/custom?format=json"
@@ -46,6 +48,7 @@ func GetStatus(auth Auth) (*UserStatus, error) {
 
 	req.Header.Set("Accept", "application/json")
 	req.Header.Set("OCS-APIRequest", "true")
+	req.Header.Set("User-Agent", userAgent)
 	req.SetBasicAuth(auth.User, auth.Password)
 
 	client := &http.Client{}
@@ -110,6 +113,7 @@ func UpdateStatus(auth Auth, status Status) error {
 	req.Header.Set("Accept", "application/json")
 	req.Header.Set("Content-Type", "application/json; charset=utf-8")
 	req.Header.Set("OCS-APIRequest", "true")
+	req.Header.Set("User-Agent", userAgent)
 	req.SetBasicAuth(auth.User, auth.Password)
 
 	client := &http.Client{}
@@ -146,6 +150,7 @@ func UpdateStatusMessage(auth Auth, message StatusMessage) error {
 	req.Header.Set("Accept", "application/json")
 	req.Header.Set("Content-Type", "application/json; charset=utf-8")
 	req.Header.Set("OCS-APIRequest", "true")
+	req.Header.Set("User-Agent", userAgent)
 	req.SetBasicAuth(auth.User, auth.Password)
 
 	client := &http.Client{}
@@ -176,6 +181,7 @@ func ClearStatusMessage(auth Auth) error {
 
 	req.Header.Set("Accept", "application/json")
 	req.Header.Set("OCS-APIRequest", "true")
+	req.Header.Set("User-Agent", userAgent)
 	req.SetBasicAuth(auth.User, auth.Password)
 
 	client := &http.Client{}
