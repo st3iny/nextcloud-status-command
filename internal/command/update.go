@@ -100,30 +100,29 @@ func RunUpdate() error {
 		}
 	}
 
-	p := tea.NewProgram(newUpdateModel(statusValue, emojiValue, messageValue, &timeoutValue))
-	// Hackity hack: Simulate form submission by pressing enter once for each field
-	if *submit {
-		go func() {
-			p.Send(tea.KeyMsg{Type: tea.KeyEnter})
-			p.Send(tea.KeyMsg{Type: tea.KeyEnter})
-			p.Send(tea.KeyMsg{Type: tea.KeyEnter})
-			p.Send(tea.KeyMsg{Type: tea.KeyEnter})
-		}()
-	}
-	m, err := p.Run()
-	model := m.(updateModel)
-	if err != nil {
-		return fmt.Errorf("Failed to render form: %s", err)
-	}
+	if !*submit {
+		model := newUpdateModel(statusValue, emojiValue, messageValue, &timeoutValue)
+		p := tea.NewProgram(model)
+		m, err := p.Run()
+		if err != nil {
+			return fmt.Errorf("Failed to render form: %s", err)
+		}
 
-	if model.form.State != huh.StateCompleted {
-		return nil
+		model = m.(updateModel)
+		if model.form.State != huh.StateCompleted {
+			return nil
+		}
+
+		*statusValue = model.form.GetString("status")
+		*messageValue = model.form.GetString("message")
+		*emojiValue = model.form.GetString("emoji")
+		timeoutValue = model.form.Get("timeout").(int64)
 	}
 
 	return spinner.New().
 		Title("Updating your status ...").
 		Action(func() {
-			updateStatusAndMessage(auth, model)
+			updateStatus(auth, *statusValue, *messageValue, *emojiValue, timeoutValue)
 		}).
 		Run()
 }
@@ -210,12 +209,7 @@ func (m updateModel) View() string {
 	return m.form.View()
 }
 
-func updateStatusAndMessage(auth ocs.Auth, model updateModel) {
-	status := model.form.GetString("status")
-	message := model.form.GetString("message")
-	emoji := model.form.GetString("emoji")
-	timeout := model.form.Get("timeout").(int64)
-
+func updateStatus(auth ocs.Auth, status, message, emoji string, timeout int64) {
 	var wg sync.WaitGroup
 	wg.Add(2)
 
